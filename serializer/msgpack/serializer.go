@@ -1,8 +1,8 @@
 package msgpack
 
 import (
+	"github.com/alirezarahmani/short-url/shortener"
 	"github.com/pkg/errors"
-	"github.com/tensor-programming/hex-microservice/shortener"
 	"github.com/vmihailenco/msgpack"
 )
 

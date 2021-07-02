@@ -7,7 +7,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
 
-	"github.com/tensor-programming/hex-microservice/shortener"
+	"github.com/alirezarahmani/short-url/shortener"
 )
 
 type redisRepository struct {

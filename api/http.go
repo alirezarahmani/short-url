@@ -8,9 +8,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
 
-	js "github.com/tensor-programming/hex-microservice/serializer/json"
-	ms "github.com/tensor-programming/hex-microservice/serializer/msgpack"
-	"github.com/tensor-programming/hex-microservice/shortener"
+	"github.com/alirezarahmani/short-url/serializer/json"
+	"github.com/alirezarahmani/short-url/serializer/msgpack"
+	"github.com/alirezarahmani/short-url/shortener"
 )
 
 type RedirectHandler interface {
@@ -26,10 +26,10 @@ func NewHandler(redirectService shortener.RedirectService) RedirectHandler {
 	return &handler{redirectService: redirectService}
 }
 
-func setupResponse(w http.ResponseWriter, contentType string, body []byte, statusCode int) {
-	w.Header().Set("Content-Type", contentType)
-	w.WriteHeader(statusCode)
-	_, err := w.Write(body)
+func setupResponse(writer http.ResponseWriter, contentType string, body []byte, statusCode int) {
+	writer.Header().Set("Content-Type", contentType)
+	writer.WriteHeader(statusCode)
+	_, err := writer.Write(body)
 	if err != nil {
 		log.Println(err)
 	}
@@ -37,50 +37,50 @@ func setupResponse(w http.ResponseWriter, contentType string, body []byte, statu
 
 func (h *handler) serializer(contentType string) shortener.RedirectSerializer {
 	if contentType == "application/x-msgpack" {
-		return &ms.Redirect{}
+		return &msgpack.Redirect{}
 	}
-	return &js.Redirect{}
+	return &json.Redirect{}
 }
 
-func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
-	code := chi.URLParam(r, "code")
+func (h *handler) Get(writer http.ResponseWriter, request *http.Request) {
+	code := chi.URLParam(request, "code")
 	redirect, err := h.redirectService.Find(code)
 	if err != nil {
 		if errors.Cause(err) == shortener.ErrRedirectNotFound {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			http.Error(writer, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
 		}
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, redirect.URL, http.StatusMovedPermanently)
+	http.Redirect(writer, request, redirect.URL, http.StatusMovedPermanently)
 }
 
-func (h *handler) Post(w http.ResponseWriter, r *http.Request) {
-	contentType := r.Header.Get("Content-Type")
-	requestBody, err := ioutil.ReadAll(r.Body)
+func (h *handler) Post(writer http.ResponseWriter, request *http.Request) {
+	contentType := request.Header.Get("Content-Type")
+	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	redirect, err := h.serializer(contentType).Decode(requestBody)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	err = h.redirectService.Store(redirect)
 	if err != nil {
 		if errors.Cause(err) == shortener.ErrRedirectInvalid {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			http.Error(writer, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	responseBody, err := h.serializer(contentType).Encode(redirect)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	setupResponse(w, contentType, responseBody, http.StatusCreated)
+	setupResponse(writer, contentType, responseBody, http.StatusCreated)
 }
