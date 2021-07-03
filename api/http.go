@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/alirezarahmani/short-url/serializer/json"
-	"github.com/alirezarahmani/short-url/serializer/msgpack"
 	"github.com/alirezarahmani/short-url/shortener"
 )
 
@@ -36,9 +35,6 @@ func setupResponse(writer http.ResponseWriter, contentType string, body []byte, 
 }
 
 func (h *handler) serializer(contentType string) shortener.RedirectSerializer {
-	if contentType == "application/x-msgpack" {
-		return &msgpack.Redirect{}
-	}
 	return &json.Redirect{}
 }
 
